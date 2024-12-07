@@ -6,21 +6,23 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManagerFactory;
 import java.io.*;
 import java.net.URL;
+import java.net.UnknownHostException;
 import java.security.KeyStore;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateFactory;
 import java.util.Scanner;
 
 public class ClientApp {
-    private static final String SERVER_URL = "https://localhost:8443/chat/sendMessage";
+    private static final String SERVER_URL = "https://26.218.160.90:8443/chat/sendMessage";
+    private static final String EXPECTED_HOST = "26.218.160.90";
 
     public static void main(String[] args) throws Exception {
         SecretKey secretKey = EncryptionUtil.generateKey();
         Scanner scanner = new Scanner(System.in);
+
         javax.net.ssl.HttpsURLConnection.setDefaultHostnameVerifier(
-                (hostname, sslSession) -> {
-                    return hostname.equals("localhost");
-                });
+                (hostname, sslSession) -> hostname.equals(EXPECTED_HOST));
+
         System.out.println("Введите сообщение для отправки (или 'exit' для выхода):");
         try {
             // Путь к папке с сертификатами
@@ -89,6 +91,12 @@ public class ClientApp {
 
     private static String sendMessageToServer(String encryptedMessage) throws Exception {
         URL url = new URL(SERVER_URL + "?clientIP=192.168.0.110");
+        // Проверка, что хост в URL соответствует ожидаемому IP-адресу
+        String host = url.getHost();
+        if (!host.equals(EXPECTED_HOST)) {
+            throw new UnknownHostException("Неверный хост: " + host + ". Ожидается: " + EXPECTED_HOST);
+        }
+
         HttpsURLConnection connection = (HttpsURLConnection) url.openConnection();
         connection.setRequestMethod("POST");
         connection.setDoOutput(true);
